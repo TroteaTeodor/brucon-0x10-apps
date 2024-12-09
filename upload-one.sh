@@ -1,7 +1,7 @@
 #!/bin/bash
 DEFAULT_PORT=/dev/cu.usbmodem313371
 # Default directory
-DEFAULT_DIR="kolab_game"
+DEFAULT_DIR="twinkle_fox"
 
 # Use the first argument if provided, otherwise use the default
 APP_DIR="${1:-$DEFAULT_DIR}"
