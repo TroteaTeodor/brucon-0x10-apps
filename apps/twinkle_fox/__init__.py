@@ -1,10 +1,46 @@
 ### Converted TwinkleFox for MicroPython Badge
-import rgb
-
-DEBUG = True
 import random
 import time
-from .display_helper import reset_buffer, prepare_pixel_global, render_image_buffer, WIDTH, HEIGHT
+import rgb
+
+WIDTH, HEIGHT = 32, 19
+image_buffer = [0] * (WIDTH * HEIGHT)
+
+
+def rgb_to_hex(color):
+    (r, g, b) = color
+    return rgba_to_hex((r, g, b, 0))
+
+
+def rgba_to_hex(color):
+    (r, g, b, alpha) = color
+    color_value = (r << 24) | (g << 16) | (b << 8) | alpha
+    return color_value
+
+
+def reset_buffer():
+    global image_buffer
+    for i in range(len(image_buffer)):
+        image_buffer[i] = 0
+
+
+def prepare_pixel_global(pos, color):
+    global image_buffer
+    (posx, posy) = pos
+    hex_color = rgb_to_hex(color)
+    i = posy * WIDTH + posx
+    image_buffer[i] = hex_color
+
+
+def prepare_pixel_global_int(i, color):
+    global image_buffer
+    hex_color = rgb_to_hex(color)
+    image_buffer[i] = hex_color
+
+
+def render_image_buffer():
+    rgb.image(image_buffer, pos=(0, 0), size=(WIDTH, HEIGHT))
+
 
 # Configuration
 NUM_LEDS = WIDTH * HEIGHT
@@ -21,6 +57,7 @@ current_palette_index = 0
 
 # Pixel state list
 active_pixels = []
+
 
 # Utility functions
 def choose_next_palette():
@@ -80,7 +117,6 @@ def buffer_twinkles():
         prepare_pixel_global((pixel["x"], pixel["y"]), color)
 
 
-
 def main():
     global current_palette_index
 
@@ -97,5 +133,6 @@ def main():
         time.sleep(0.03)
         rgb.clear()
         render_image_buffer()
+
 
 main()
