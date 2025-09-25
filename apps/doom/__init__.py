@@ -149,8 +149,9 @@ def on_a(pressed):
 
 def on_b(pressed):
     if pressed:
-        import sys
-        sys.exit()
+        print("Reset position")
+        global px, py, pa
+        px, py, pa = 2.0, 2.0, 0
 
 def main():
     print("DOOM Badge - Direct")
@@ -177,5 +178,7 @@ def main():
             print(f"Frame {frame}, Pos: ({px:.1f}, {py:.1f}), Angle: {pa}")
 
         time.sleep(0.1)
+
+    print("Exiting DOOM...")
 
 main()
