@@ -75,18 +75,32 @@ def render_doom():
         wall_top = max(0, (HEIGHT - wall_height) // 2)
         wall_bottom = min(HEIGHT - 1, wall_top + wall_height)
 
-        brightness = max(50, min(255, int(255 // (1 + distance//2))))
-        wall_color = (brightness, brightness // 2, 0)
+        # Better distance-based brightness
+        brightness = max(20, min(255, int(300 / (1 + distance * 0.5))))
+        wall_color = (brightness, brightness // 3, brightness // 8)
 
         for row in range(HEIGHT):
             if row < wall_top:
-                set_pixel(col, row, (20, 20, 50))
+                # Sky with gradient that changes with distance
+                sky_base = max(15, 50 - row * 2)
+                sky_dist_fade = max(0.3, 1.0 - distance * 0.1)
+                sky_brightness = int(sky_base * sky_dist_fade)
+                set_pixel(col, row, (sky_brightness//3, sky_brightness//3, sky_brightness))
             elif row <= wall_bottom:
                 set_pixel(col, row, wall_color)
             else:
-                set_pixel(col, row, (0, 30, 0))
+                # Green floor with distance fog
+                floor_dist = (row - wall_bottom) * distance * 0.2
+                floor_brightness = max(10, int(80 / (1 + floor_dist)))
+                set_pixel(col, row, (floor_brightness//4, floor_brightness, floor_brightness//6))
 
-    set_pixel(WIDTH//2, HEIGHT//2, (255, 255, 255))
+    # Enhanced crosshair
+    cx, cy = WIDTH//2, HEIGHT//2
+    set_pixel(cx, cy, (255, 0, 0))
+    set_pixel(cx-1, cy, (200, 0, 0))
+    set_pixel(cx+1, cy, (200, 0, 0))
+    set_pixel(cx, cy-1, (200, 0, 0))
+    set_pixel(cx, cy+1, (200, 0, 0))
 
 def move_player(forward):
     global px, py, pa
@@ -135,8 +149,8 @@ def on_a(pressed):
 
 def on_b(pressed):
     if pressed:
-        global px, py, pa
-        px, py, pa = 2.0, 2.0, 0
+        import sys
+        sys.exit()
 
 def main():
     print("DOOM Badge - Direct")
