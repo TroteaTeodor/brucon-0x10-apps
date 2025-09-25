@@ -42,26 +42,9 @@ obstacles = []
 score = 0
 game_over = False
 
-# Battery indicator - try multiple methods
+# Battery indicator - simplified to avoid crashes
 battery_method = None
-battery_value = 0
-try:
-    import battery
-    battery_method = "battery"
-    print("Using battery module")
-except ImportError:
-    try:
-        import machine
-        battery_method = "machine"
-        print("Using machine module")
-    except ImportError:
-        try:
-            from machine import ADC, Pin
-            battery_method = "adc"
-            print("Using ADC for battery")
-        except ImportError:
-            battery_method = None
-            print("No battery method available")
+battery_value = 50  # Default fallback value
 
 def draw_four_pointed_star(size, color_cycle):
     """Draw a classic 4-pointed North Star with empty center"""
@@ -171,107 +154,46 @@ def draw_ns2_text():
             prepare_pixel_global((x, y), (255, 255, 255))
 
 def get_battery_level():
-    """Get battery level using available method"""
+    """Get battery level - simplified to avoid crashes"""
     global battery_value
-
-    if battery_method == "battery":
-        try:
-            import battery
-            battery_value = battery.read_batt_percentage()
-            return battery_value
-        except:
-            pass
-    elif battery_method == "machine":
-        try:
-            import machine
-            # Try different ADC pins commonly used for battery
-            adc = machine.ADC(0)  # Try pin 0
-            raw = adc.read_u16()
-            # Convert to percentage (this is approximate)
-            battery_value = int((raw / 65535) * 100)
-            return battery_value
-        except:
-            try:
-                adc = machine.ADC(4)  # Try pin 4
-                raw = adc.read_u16()
-                battery_value = int((raw / 65535) * 100)
-                return battery_value
-            except:
-                pass
-    elif battery_method == "adc":
-        try:
-            from machine import ADC
-            adc = ADC(0)
-            raw = adc.read_u16()
-            battery_value = int((raw / 65535) * 100)
-            return battery_value
-        except:
-            pass
-
-    # Fallback - simulate battery level based on time for testing
+    # Simple animated battery level for visual effect
     battery_value = 50 + int(30 * ((frame // 100) % 10) / 10)
     return battery_value
 
 def draw_battery_indicator():
-    """Draw battery indicator in top right corner"""
-    try:
-        battery_percent = get_battery_level()
+    """Draw battery indicator in top right corner - simplified"""
+    battery_percent = get_battery_level()
 
-        # Battery position in top right
-        battery_x, battery_y = WIDTH - 5, 0
+    # Battery position in top right
+    battery_x, battery_y = WIDTH - 5, 0
 
-        # Draw battery outline (4x3 pixels)
-        outline_color = (100, 100, 100)
+    # Draw battery outline (4x3 pixels)
+    outline_color = (100, 100, 100)
 
-        # Main battery body
-        prepare_pixel_global((battery_x, battery_y), outline_color)      # top left
-        prepare_pixel_global((battery_x + 1, battery_y), outline_color)  # top middle
-        prepare_pixel_global((battery_x + 2, battery_y), outline_color)  # top right
-        prepare_pixel_global((battery_x, battery_y + 1), outline_color)  # middle left
-        prepare_pixel_global((battery_x + 2, battery_y + 1), outline_color)  # middle right
-        prepare_pixel_global((battery_x, battery_y + 2), outline_color)  # bottom left
-        prepare_pixel_global((battery_x + 1, battery_y + 2), outline_color)  # bottom middle
-        prepare_pixel_global((battery_x + 2, battery_y + 2), outline_color)  # bottom right
+    # Main battery body
+    prepare_pixel_global((battery_x, battery_y), outline_color)      # top left
+    prepare_pixel_global((battery_x + 1, battery_y), outline_color)  # top middle
+    prepare_pixel_global((battery_x + 2, battery_y), outline_color)  # top right
+    prepare_pixel_global((battery_x, battery_y + 1), outline_color)  # middle left
+    prepare_pixel_global((battery_x + 2, battery_y + 1), outline_color)  # middle right
+    prepare_pixel_global((battery_x, battery_y + 2), outline_color)  # bottom left
+    prepare_pixel_global((battery_x + 1, battery_y + 2), outline_color)  # bottom middle
+    prepare_pixel_global((battery_x + 2, battery_y + 2), outline_color)  # bottom right
 
-        # Battery tip
-        prepare_pixel_global((battery_x + 3, battery_y + 1), outline_color)
+    # Battery tip
+    prepare_pixel_global((battery_x + 3, battery_y + 1), outline_color)
 
-        # Fill based on battery level with proper colors
-        if battery_percent > 60:
-            fill_color = (0, 255, 0)  # Green
-        elif battery_percent > 30:
-            fill_color = (255, 255, 0)  # Yellow
-        elif battery_percent > 15:
-            fill_color = (255, 165, 0)  # Orange
-        else:
-            fill_color = (255, 0, 0)  # Red
+    # Fill based on battery level
+    if battery_percent > 60:
+        fill_color = (0, 255, 0)  # Green
+    elif battery_percent > 30:
+        fill_color = (255, 255, 0)  # Yellow
+    else:
+        fill_color = (255, 0, 0)  # Red
 
-        # Fill bars based on level
-        if battery_percent > 20:
-            prepare_pixel_global((battery_x + 1, battery_y + 1), fill_color)
-        if battery_percent > 50:
-            prepare_pixel_global((battery_x + 1, battery_y + 1), fill_color)
-            # Add tip blink for high battery
-            if (frame // 15) % 2 == 0:
-                prepare_pixel_global((battery_x + 3, battery_y + 1), fill_color)
-
-        # Show battery method in corner for debugging
-        if battery_method:
-            # Blink different colors based on method
-            if battery_method == "battery" and (frame // 10) % 2:
-                prepare_pixel_global((WIDTH - 1, HEIGHT - 1), (0, 255, 0))  # green = real battery
-            elif battery_method == "machine" and (frame // 10) % 2:
-                prepare_pixel_global((WIDTH - 1, HEIGHT - 1), (0, 0, 255))  # blue = machine ADC
-            elif battery_method == "adc" and (frame // 10) % 2:
-                prepare_pixel_global((WIDTH - 1, HEIGHT - 1), (255, 255, 0))  # yellow = raw ADC
-        else:
-            # Red blink = no battery method (using simulation)
-            if (frame // 10) % 2:
-                prepare_pixel_global((WIDTH - 1, HEIGHT - 1), (255, 0, 0))
-
-    except Exception as e:
-        # Show error indicator
-        prepare_pixel_global((WIDTH - 1, HEIGHT - 1), (255, 0, 255))  # magenta = error
+    # Fill bars based on level
+    if battery_percent > 20:
+        prepare_pixel_global((battery_x + 1, battery_y + 1), fill_color)
 
 class Obstacle:
     def __init__(self, x):
@@ -402,6 +324,7 @@ def setup_buttons():
     buttons.register(buttons.BTN_LEFT, lambda down: handle_button_press(down, 'LEFT'))
     buttons.register(buttons.BTN_UP, lambda down: handle_button_press(down, 'RIGHT') if flappy_active else None)
     buttons.register(buttons.BTN_A, lambda down: handle_button_press(down, 'RIGHT') if flappy_active else None)
+    # Don't register BTN_B - let it use the default system exit behavior
 
 def main():
     global frame

@@ -206,14 +206,18 @@ def render_3d():
         # Draw vertical line
         for row in range(HEIGHT):
             if row < obj_top:
-                # Ceiling
-                set_pixel(col, row, (20, 20, 50))  # Dark blue
+                # Sky - bright blue gradient
+                sky_brightness = 80 + (HEIGHT - row) * 3  # Brighter at top
+                sky_brightness = min(150, sky_brightness)
+                set_pixel(col, row, (sky_brightness//3, sky_brightness//2, sky_brightness))
             elif row <= obj_bottom:
                 # Wall or enemy
                 set_pixel(col, row, obj_color)
             else:
-                # Floor
-                set_pixel(col, row, (30, 60, 30))  # Dark green
+                # Floor - brown/tan color with distance shading
+                floor_dist = (row - obj_bottom) * 0.3
+                floor_brightness = max(40, int(120 / (1 + floor_dist)))
+                set_pixel(col, row, (floor_brightness, floor_brightness//2, floor_brightness//4))
 
     # Add crosshair - make it red if aiming at an enemy
     crosshair_color = (255, 255, 255)  # Default white
