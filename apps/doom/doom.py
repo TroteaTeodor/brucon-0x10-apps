@@ -175,7 +175,7 @@ def main():
     buttons.register(buttons.BTN_LEFT, on_left)
     buttons.register(buttons.BTN_RIGHT, on_right)
     buttons.register(buttons.BTN_A, on_a)
-    buttons.register(buttons.BTN_B, on_b)
+    # Don't register BTN_B - let it use the default system reboot/exit behavior
 
     frame = 0
     while True:
