@@ -1,5 +1,4 @@
-### Simple DOOM Test for BruCON 2024 Badge
-import random
+### DOOM Badge - Copy TwinkleFox Pattern Exactly
 import time
 import rgb
 
@@ -30,46 +29,54 @@ def prepare_pixel_global(pos, color):
 def render_image_buffer():
     rgb.image(image_buffer, pos=(0, 0), size=(WIDTH, HEIGHT))
 
-def draw_doom_pattern():
-    """Draw a simple DOOM-like pattern"""
+def buffer_doom_scene():
+    """Buffer DOOM scene like TwinkleFox buffers twinkles"""
     reset_buffer()
 
-    # Simple 3D-like effect
+    # Draw simple DOOM corridor
     for x in range(WIDTH):
-        # Create a simple perspective effect
-        wall_height = 8 + int(4 * abs(x - WIDTH//2) / (WIDTH//2))
+        center_dist = abs(x - WIDTH//2)
 
-        # Sky/ceiling
-        for y in range((HEIGHT - wall_height) // 2):
-            prepare_pixel_global((x, y), (50, 50, 100))  # Dark blue sky
+        # Wall height - taller in center
+        wall_height = HEIGHT//2 + (WIDTH//2 - center_dist)//3
+        wall_height = max(6, min(HEIGHT-2, wall_height))
 
-        # Wall
-        wall_start = (HEIGHT - wall_height) // 2
-        wall_end = wall_start + wall_height
+        wall_top = (HEIGHT - wall_height)//2
+        wall_bottom = wall_top + wall_height
 
-        for y in range(wall_start, wall_end):
-            # Orange walls with some variation
-            brightness = 200 + random.randint(-50, 50)
-            prepare_pixel_global((x, y), (brightness, brightness//2, 0))
+        for y in range(HEIGHT):
+            if y < wall_top:
+                # Sky
+                prepare_pixel_global((x, y), (30, 30, 80))
+            elif y <= wall_bottom:
+                # Wall with simple texture
+                brightness = 200 - center_dist * 4
+                if (x + y) % 3 == 0:
+                    brightness = brightness // 2
+                prepare_pixel_global((x, y), (brightness, brightness//2, 0))
+            else:
+                # Floor
+                floor_brightness = max(30, 80 - (y - wall_bottom) * 3)
+                prepare_pixel_global((x, y), (0, floor_brightness, 0))
 
-        # Floor
-        for y in range(wall_end, HEIGHT):
-            prepare_pixel_global((x, y), (30, 60, 30))  # Green floor
-
-    render_image_buffer()
+    # Crosshair
+    prepare_pixel_global((WIDTH//2, HEIGHT//2), (255, 255, 255))
 
 def main():
-    print("DOOM Test - Starting...")
+    print("DOOM - TwinkleFox Pattern")
 
     frame = 0
     while True:
-        draw_doom_pattern()
+        # Update scene
+        buffer_doom_scene()
+
+        # EXACT same timing and order as TwinkleFox
+        time.sleep(0.03)
+        rgb.clear()
+        render_image_buffer()
 
         frame += 1
-        if frame % 20 == 0:
-            print(f"DOOM Frame: {frame}")
-
-        time.sleep(0.1)
-        rgb.clear()
+        if frame % 100 == 0:
+            print(f"DOOM frame: {frame}")
 
 main()
