@@ -20,6 +20,12 @@ world_map = [
     [1,1,1,1,1,1]
 ]
 
+# Simple enemy system - just fixed positions
+enemies = [
+    {'x': 4.0, 'y': 3.0, 'alive': True},
+    {'x': 3.0, 'y': 4.0, 'alive': True}
+]
+
 def rgb_to_hex(color):
     (r, g, b) = color
     return (r << 24) | (g << 16) | (b << 8)
@@ -37,6 +43,30 @@ def set_pixel(x, y, color):
 def render_buffer():
     rgb.image(image_buffer, pos=(0, 0), size=(WIDTH, HEIGHT))
 
+def shoot():
+    """Simple shooting - check center ray for enemy"""
+    center_ray = cast_ray(pa)
+    if len(center_ray) == 2:
+        distance, hit_type = center_ray
+        if hit_type == "enemy" and distance < 3.0:
+            # Find and kill the enemy
+            angle_rad = pa * 3.14159 / 180
+            dx = math.cos(angle_rad) * 0.1
+            dy = math.sin(angle_rad) * 0.1
+            x, y = px, py
+
+            for step in range(int(distance / 0.1)):
+                x += dx
+                y += dy
+                for enemy in enemies:
+                    if enemy['alive']:
+                        enemy_dist = math.sqrt((x - enemy['x'])**2 + (y - enemy['y'])**2)
+                        if enemy_dist < 0.2:
+                            enemy['alive'] = False
+                            print("Enemy killed!")
+                            return True
+    return False
+
 def cast_ray(angle_deg):
     global px, py
     angle_rad = angle_deg * 3.14159 / 180
@@ -51,11 +81,19 @@ def cast_ray(angle_deg):
         y += dy
         distance += 0.1
 
+        # Check if we hit an enemy first
+        for enemy in enemies:
+            if enemy['alive']:
+                enemy_dist = math.sqrt((x - enemy['x'])**2 + (y - enemy['y'])**2)
+                if enemy_dist < 0.2:  # Enemy hit radius
+                    return distance, "enemy"
+
+        # Check walls
         mx, my = int(x), int(y)
         if mx < 0 or mx >= 6 or my < 0 or my >= 6 or world_map[my][mx] == 1:
-            return distance
+            return distance, "wall"
 
-    return 6.0
+    return 6.0, "wall"
 
 def render_doom():
     global pa
@@ -65,7 +103,14 @@ def render_doom():
     fov = 60
     for col in range(WIDTH):
         ray_angle = pa - fov//2 + (col * fov) // WIDTH
-        distance = cast_ray(ray_angle)
+        ray_result = cast_ray(ray_angle)
+
+        # Handle both old and new return formats
+        if isinstance(ray_result, tuple) and len(ray_result) == 2:
+            distance, hit_type = ray_result
+        else:
+            distance = ray_result
+            hit_type = "wall"
 
         if distance < 0.1:
             wall_height = HEIGHT
@@ -77,7 +122,12 @@ def render_doom():
 
         # Better distance-based brightness
         brightness = max(20, min(255, int(300 / (1 + distance * 0.5))))
-        wall_color = (brightness, brightness // 3, brightness // 8)
+
+        # Choose color based on what we hit
+        if hit_type == "enemy":
+            wall_color = (brightness // 4, brightness, brightness // 4)  # Green for enemies
+        else:
+            wall_color = (brightness, brightness // 3, brightness // 8)  # Orange for walls
 
         for row in range(HEIGHT):
             if row < wall_top:
@@ -94,13 +144,19 @@ def render_doom():
                 floor_brightness = max(10, int(80 / (1 + floor_dist)))
                 set_pixel(col, row, (floor_brightness//4, floor_brightness, floor_brightness//6))
 
-    # Enhanced crosshair
+    # Enhanced crosshair - red when aiming at enemy
     cx, cy = WIDTH//2, HEIGHT//2
-    set_pixel(cx, cy, (255, 0, 0))
-    set_pixel(cx-1, cy, (200, 0, 0))
-    set_pixel(cx+1, cy, (200, 0, 0))
-    set_pixel(cx, cy-1, (200, 0, 0))
-    set_pixel(cx, cy+1, (200, 0, 0))
+    center_ray = cast_ray(pa)
+    if isinstance(center_ray, tuple) and len(center_ray) == 2 and center_ray[1] == "enemy":
+        crosshair_color = (255, 0, 0)  # Red when aiming at enemy
+    else:
+        crosshair_color = (255, 255, 255)  # White normally
+
+    set_pixel(cx, cy, crosshair_color)
+    set_pixel(cx-1, cy, crosshair_color)
+    set_pixel(cx+1, cy, crosshair_color)
+    set_pixel(cx, cy-1, crosshair_color)
+    set_pixel(cx, cy+1, crosshair_color)
 
 def move_player(forward):
     global px, py, pa
@@ -145,11 +201,11 @@ def on_right(pressed):
 
 def on_a(pressed):
     if pressed:
-        print("PEW!")
+        shoot()
 
 def on_b(pressed):
     if pressed:
-        print("PEW!")
+        shoot()
 
 def main():
     print("DOOM Badge - Direct")
