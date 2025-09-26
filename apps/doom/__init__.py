@@ -10,6 +10,10 @@ image_buffer = [0] * (WIDTH * HEIGHT)
 px, py = 2.0, 2.0
 pa = 0
 
+# Game state
+score = 0
+total_enemies = 2
+
 # Simple world map
 world_map = [
     [1,1,1,1,1,1],
@@ -20,11 +24,11 @@ world_map = [
     [1,1,1,1,1,1]
 ]
 
-# Simple enemy system - just fixed positions
-enemies = [
-    {'x': 4.0, 'y': 3.0, 'alive': True},
-    {'x': 3.0, 'y': 4.0, 'alive': True}
-]
+# Enemy system with random spawning
+import random
+enemies = []
+max_enemies = 2
+enemy_spawn_timer = 0
 
 def rgb_to_hex(color):
     (r, g, b) = color
@@ -43,8 +47,161 @@ def set_pixel(x, y, color):
 def render_buffer():
     rgb.image(image_buffer, pos=(0, 0), size=(WIDTH, HEIGHT))
 
+def draw_digit(x, y, digit, color):
+    """Draw a single digit at position x,y"""
+    # Simple 3x5 pixel font for digits 0-9
+    patterns = {
+        0: [
+            [1,1,1],
+            [1,0,1],
+            [1,0,1],
+            [1,0,1],
+            [1,1,1]
+        ],
+        1: [
+            [0,1,0],
+            [1,1,0],
+            [0,1,0],
+            [0,1,0],
+            [1,1,1]
+        ],
+        2: [
+            [1,1,1],
+            [0,0,1],
+            [1,1,1],
+            [1,0,0],
+            [1,1,1]
+        ],
+        3: [
+            [1,1,1],
+            [0,0,1],
+            [1,1,1],
+            [0,0,1],
+            [1,1,1]
+        ],
+        4: [
+            [1,0,1],
+            [1,0,1],
+            [1,1,1],
+            [0,0,1],
+            [0,0,1]
+        ],
+        5: [
+            [1,1,1],
+            [1,0,0],
+            [1,1,1],
+            [0,0,1],
+            [1,1,1]
+        ],
+        6: [
+            [1,1,1],
+            [1,0,0],
+            [1,1,1],
+            [1,0,1],
+            [1,1,1]
+        ],
+        7: [
+            [1,1,1],
+            [0,0,1],
+            [0,0,1],
+            [0,0,1],
+            [0,0,1]
+        ],
+        8: [
+            [1,1,1],
+            [1,0,1],
+            [1,1,1],
+            [1,0,1],
+            [1,1,1]
+        ],
+        9: [
+            [1,1,1],
+            [1,0,1],
+            [1,1,1],
+            [0,0,1],
+            [1,1,1]
+        ]
+    }
+
+    if digit in patterns:
+        pattern = patterns[digit]
+        for row in range(5):
+            for col in range(3):
+                if pattern[row][col]:
+                    set_pixel(x + col, y + row, color)
+
+def draw_number(x, y, number, color):
+    """Draw a number at position x,y"""
+    if number == 0:
+        draw_digit(x, y, 0, color)
+        return
+
+    digits = []
+    temp = number
+    while temp > 0:
+        digits.append(temp % 10)
+        temp //= 10
+
+    # Draw digits from right to left
+    current_x = x
+    for i in range(len(digits)-1, -1, -1):
+        draw_digit(current_x, y, digits[i], color)
+        current_x += 4  # Space between digits
+
+def spawn_enemy():
+    """Spawn an enemy at a random valid position"""
+    # Try to find a good spawn position
+    for attempt in range(20):
+        x = random.uniform(1.2, 4.8)
+        y = random.uniform(1.2, 4.8)
+
+        # Make sure it's not in a wall
+        mx, my = int(x), int(y)
+        if 0 <= mx < 6 and 0 <= my < 6 and world_map[my][mx] == 0:
+            # Make sure it's not too close to player
+            dist_to_player = math.sqrt((x - px)**2 + (y - py)**2)
+            if dist_to_player > 1.0:
+                # Make sure it's not too close to other enemies
+                too_close = False
+                for enemy in enemies:
+                    if enemy['alive']:
+                        dist = math.sqrt((x - enemy['x'])**2 + (y - enemy['y'])**2)
+                        if dist < 0.8:
+                            too_close = True
+                            break
+                if not too_close:
+                    return {'x': x, 'y': y, 'alive': True}
+    return None
+
+def update_enemies():
+    """Update enemy spawning system"""
+    global enemy_spawn_timer
+
+    # Remove dead enemies
+    enemies[:] = [e for e in enemies if e['alive']]
+
+    # Spawn new enemies if needed
+    alive_count = len(enemies)
+    if alive_count < max_enemies:
+        enemy_spawn_timer += 1
+        if enemy_spawn_timer > 60:  # Spawn every 6 seconds
+            new_enemy = spawn_enemy()
+            if new_enemy:
+                enemies.append(new_enemy)
+                enemy_spawn_timer = 0
+
+def init_enemies():
+    """Initialize starting enemies"""
+    global enemies
+    enemies.clear()
+    for _ in range(max_enemies):
+        enemy = spawn_enemy()
+        if enemy:
+            enemies.append(enemy)
+
 def shoot():
     """Simple shooting - check center ray for enemy"""
+    global score
     center_ray = cast_ray(pa)
     if len(center_ray) == 2:
         distance, hit_type = center_ray
@@ -55,7 +212,7 @@ def shoot():
             dy = math.sin(angle_rad) * 0.1
             x, y = px, py
 
-            for step in range(int(distance / 0.1)):
+            for _ in range(int(distance / 0.1)):
                 x += dx
                 y += dy
                 for enemy in enemies:
@@ -63,7 +220,8 @@ def shoot():
                         enemy_dist = math.sqrt((x - enemy['x'])**2 + (y - enemy['y'])**2)
                         if enemy_dist < 0.2:
                             enemy['alive'] = False
-                            print("Enemy killed!")
+                            score += 1
+                            print(f"Enemy killed! Score: {score}")
                             return True
     return False
 
@@ -158,6 +316,9 @@ def render_doom():
     set_pixel(cx, cy-1, crosshair_color)
     set_pixel(cx, cy+1, crosshair_color)
 
+    # Draw score in top right corner
+    draw_number(WIDTH-8, 1, score, (255, 255, 0))  # Yellow score only
+
 def move_player(forward):
     global px, py, pa
 
@@ -208,7 +369,10 @@ def on_b(pressed):
         shoot()
 
 def main():
-    print("DOOM Badge - Direct")
+    print("DOOM Badge - Starting with enemy spawning...")
+
+    # Initialize enemies
+    init_enemies()
 
     buttons.register(buttons.BTN_UP, on_up)
     buttons.register(buttons.BTN_DOWN, on_down)
@@ -222,6 +386,9 @@ def main():
         move_player(move_forward)
         rotate_player(turn_dir)
 
+        # Update enemy spawning
+        update_enemies()
+
         render_doom()
 
         rgb.clear()
@@ -229,7 +396,8 @@ def main():
 
         frame += 1
         if frame % 60 == 0:
-            print(f"Frame {frame}, Pos: ({px:.1f}, {py:.1f}), Angle: {pa}")
+            alive_count = len([e for e in enemies if e['alive']])
+            print(f"Frame {frame}, Score: {score}, Enemies: {alive_count}")
 
         time.sleep(0.1)
 
